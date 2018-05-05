@@ -30,9 +30,9 @@ class LineTrackingMixin(object):
 
         dict_base = self._dict
         class OptionWrapper(self._dict):
-            def __init__(inner):
+            def __init__(inner, *args, **kwargs):
                 inner.sectname = None
-                dict_base.__init__(inner)
+                dict_base.__init__(inner, *args, **kwargs)
 
             def __setitem__(inner, key, value):
                 if inner.sectname is not None:
@@ -71,7 +71,8 @@ class LineTrackingMixin(object):
 
         self._dict = OptionWrapper
         self._sections = SectionWrapper()
-
+        self._defaults = OptionWrapper(self._defaults)
+        self._defaults.sectname = configparser.DEFAULTSECT
 
     def _set_location(self, sectname, option):
         if self._curr_lineno is not None:
@@ -99,17 +100,22 @@ class LineTrackingMixin(object):
     def get_location(self, section, option):
         if not self.has_option(section, option):
             raise configparser.NoOptionError(option, section)
-        return self._option_lines.get((section, option))
+        loc = self._option_lines.get((section, option))
+        if loc is None and option in self._defaults:
+            return self._option_lines.get((configparser.DEFAULTSECT, option))
+        return loc
 
     def get_line(self, section, option):
-        if not self.has_option(section, option):
-            raise configparser.NoOptionError(option, section)
-        return self._option_lines.get((section, option), (None,None))[1]
+        loc = self.get_location(section, option)
+        if loc is not None:
+            return loc[1]
+        return None
 
     def get_filename(self, section, option):
-        if not self.has_option(section, option):
-            raise configparser.NoOptionError(option, section)
-        return self._option_lines.get((section, option), (None,None))[0]
+        loc = self.get_location(section, option)
+        if loc is not None:
+            return loc[0]
+        return None
 
 
 class RawConfigParser(LineTrackingMixin, configparser.RawConfigParser):

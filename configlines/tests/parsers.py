@@ -61,3 +61,29 @@ class ConfigTest(TestCase):
             self.assertIsNone(cfg.get_location('qwerty', 'def'))
             self.assertIsNone(cfg.get_filename('qwerty', 'def'))
             self.assertIsNone(cfg.get_line('qwerty', 'def'))
+
+    def test_defaults(self):
+        cfg = configlines.ConfigParser()
+        path = resource_filename(__name__, 'data2.cfg')
+        cfg.read(path)
+
+        self.assertEqual(cfg.get('sectA', 'foo'), '1')
+        self.assertEqual(cfg.get_location('sectA', 'foo'), (path, 2))
+        self.assertEqual(cfg.get_filename('sectA', 'foo'), path)
+        self.assertEqual(cfg.get_line('sectA', 'foo'), 2)
+
+        self.assertEqual(cfg.get('sectA', 'bar'), 'B')
+        self.assertEqual(cfg.get_location('sectA', 'bar'), (path, 9))
+        self.assertEqual(cfg.get_filename('sectA', 'bar'), path)
+        self.assertEqual(cfg.get_line('sectA', 'bar'), 9)
+
+        self.assertEqual(cfg.get('sectB', 'foo'), 'A')
+        self.assertEqual(cfg.get_location('sectB', 'foo'), (path, 8))
+        self.assertEqual(cfg.get_filename('sectB', 'foo'), path)
+        self.assertEqual(cfg.get_line('sectB', 'foo'), 8)
+
+        self.assertEqual(cfg.get('sectB', 'bar'), '2')
+        self.assertEqual(cfg.get_location('sectB', 'bar'), (path, 5))
+        self.assertEqual(cfg.get_filename('sectB', 'bar'), path)
+        self.assertEqual(cfg.get_line('sectB', 'bar'), 5)
+
