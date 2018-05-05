@@ -87,3 +87,23 @@ class ConfigTest(TestCase):
         self.assertEqual(cfg.get_filename('sectB', 'bar'), path)
         self.assertEqual(cfg.get_line('sectB', 'bar'), 5)
 
+    def test_multiple_files(self):
+        cfg = configlines.ConfigParser()
+        path1 = resource_filename(__name__, 'data2.cfg')
+        path2 = resource_filename(__name__, 'data3.cfg')
+        cfg.read([path1, path2])
+
+        self.assertEqual(cfg.get('sectA', 'foo'), '1')
+        self.assertEqual(cfg.get_location('sectA', 'foo'), (path1, 2))
+        self.assertEqual(cfg.get_filename('sectA', 'foo'), path1)
+        self.assertEqual(cfg.get_line('sectA', 'foo'), 2)
+
+        self.assertEqual(cfg.get('sectA', 'bar'), 'B')
+        self.assertEqual(cfg.get_location('sectA', 'bar'), (path1, 9))
+        self.assertEqual(cfg.get_filename('sectA', 'bar'), path1)
+        self.assertEqual(cfg.get_line('sectA', 'bar'), 9)
+
+        self.assertEqual(cfg.get('sectA', 'baz'), '3')
+        self.assertEqual(cfg.get_location('sectA', 'baz'), (path2, 2))
+        self.assertEqual(cfg.get_filename('sectA', 'baz'), path2)
+        self.assertEqual(cfg.get_line('sectA', 'baz'), 2)
