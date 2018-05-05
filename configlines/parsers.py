@@ -6,13 +6,15 @@ from six.moves import configparser
 
 
 class LineTrackingMixin(object):
-    def __init__(self, *args, **kwds):
-        # Let the base class set itself up
-        super(LineTrackingMixin, self).__init__(*args, **kwds)
+    def __init__(self):
+        # We'll call constructors explicitly to ensure that this happens after
+        # the main base class.
 
-        # It can be done with some clever wrapping of classes, but it's a pain
         if not issubclass(self._dict, OrderedDict):
-            raise TypeError("The only allowed dict_type is OrderedDict (for now)")
+            # It can probably be done with some clever wrapping of classes, but
+            # it's a pain
+            raise TypeError("The only allowed dict_type is OrderedDict "
+                            "(for now)")
 
         self._option_lines = {}
 
@@ -23,16 +25,24 @@ class LineTrackingMixin(object):
         self._curr_lineno = None
         self._curr_filename = None
 
-        # self._sections, etc, have been initialized, so we can
-        # wrap self._dict now. Use that for the base class just in case
-        # the user passed in something custom.
+        # Use self._dict as the base class in case the user used something
+        # custom. Hold on to a reference though, because it may change
 
-        class LineNumberDict(self._dict):
+        dict_base = self._dict
+        class OptionWrapper(self._dict):
+            def __init__(inner):
+                inner.sectname = None
+                dict_base.__init__(inner)
+
             def __setitem__(inner, key, value):
-                self._set_location(key)
-                super(LineNumberDict, inner).__setitem__(key, value)
+                if inner.sectname is not None:
+                    self._set_location(inner.sectname, key)
+                dict_base.__setitem__(inner, key, value)
 
-        self._dict = LineNumberDict
+        class SectionWrapper(self._dict):
+            def __setitem__(inner, key, value):
+                value.sectname = key
+                dict_base.__setitem__(inner, key, value)
 
         class FpWrapper(object):
             def __init__(inner, fp):
@@ -45,6 +55,9 @@ class LineTrackingMixin(object):
                     self._curr_lineno = None
                 elif self._curr_lineno is None:
                     self._curr_lineno = 1
+                else:
+                    self._curr_lineno += 1
+                return line
             
             def __iter__(inner):
                 for line in inner.fp:
@@ -56,7 +69,11 @@ class LineTrackingMixin(object):
                 self._curr_lineno = None
         self._fp_wrapper = FpWrapper
 
-    def _set_location(self, option, sectname=None):
+        self._dict = OptionWrapper
+        self._sections = SectionWrapper()
+
+
+    def _set_location(self, sectname, option):
         if self._curr_lineno is not None:
             if sectname is None:
                 sectname = next(reversed(self._sections))
@@ -76,7 +93,7 @@ class LineTrackingMixin(object):
             self._curr_lineno = None
 
     def set(self, section, option, *args, **kwargs):
-        self._set_location(option, section)
+        self._set_location(section, option)
         return super(LineTrackingMixin, self).set(section, option, *args, **kwargs)
 
     def get_location(self, section, option):
@@ -96,10 +113,17 @@ class LineTrackingMixin(object):
 
 
 class RawConfigParser(LineTrackingMixin, configparser.RawConfigParser):
-    pass
+    def __init__(self, *args, **kwargs):
+        configparser.RawConfigParser.__init__(self, *args, **kwargs)
+        LineTrackingMixin.__init__(self)
 
 class ConfigParser(LineTrackingMixin, configparser.ConfigParser):
-    pass
+    def __init__(self, *args, **kwargs):
+        configparser.ConfigParser.__init__(self, *args, **kwargs)
+        LineTrackingMixin.__init__(self)
 
 class SafeConfigParser(LineTrackingMixin, configparser.SafeConfigParser):
-    pass
+    def __init__(self, *args, **kwargs):
+        configparser.SafeConfigParser.__init__(self, *args, **kwargs)
+        LineTrackingMixin.__init__(self)
+

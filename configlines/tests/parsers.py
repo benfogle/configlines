@@ -1,7 +1,10 @@
 from unittest import TestCase
-import configparser
+import sys
 
+import six
+from six.moves import configparser
 from pkg_resources import resource_filename
+
 import configlines
 
 class ConfigTest(TestCase):
@@ -41,20 +44,20 @@ class ConfigTest(TestCase):
         self.assertIsNone(cfg.get_filename('foo', 'bar'))
         self.assertIsNone(cfg.get_line('foo', 'bar'))
 
-        cfg['foo']['baz'] = 'q'
-        self.assertEqual(cfg.get('foo', 'baz'), 'q')
-        self.assertIsNone(cfg.get_location('foo', 'baz'))
-        self.assertIsNone(cfg.get_filename('foo', 'baz'))
-        self.assertIsNone(cfg.get_line('foo', 'baz'))
+        if sys.hexversion >= 0x03020000:
+            cfg['foo']['baz'] = 'q'
+            self.assertEqual(cfg.get('foo', 'baz'), 'q')
+            self.assertIsNone(cfg.get_location('foo', 'baz'))
+            self.assertIsNone(cfg.get_filename('foo', 'baz'))
+            self.assertIsNone(cfg.get_line('foo', 'baz'))
 
-        cfg.read_dict({'qwerty':{'abc':'a', 'def':'b'}})
-        self.assertEqual(cfg.get('qwerty', 'abc'), 'a')
-        self.assertIsNone(cfg.get_location('qwerty', 'abc'))
-        self.assertIsNone(cfg.get_filename('qwerty', 'abc'))
-        self.assertIsNone(cfg.get_line('qwerty', 'abc'))
+            cfg.read_dict({'qwerty':{'abc':'a', 'def':'b'}})
+            self.assertEqual(cfg.get('qwerty', 'abc'), 'a')
+            self.assertIsNone(cfg.get_location('qwerty', 'abc'))
+            self.assertIsNone(cfg.get_filename('qwerty', 'abc'))
+            self.assertIsNone(cfg.get_line('qwerty', 'abc'))
 
-        self.assertEqual(cfg.get('qwerty', 'def'), 'b')
-        self.assertIsNone(cfg.get_location('qwerty', 'def'))
-        self.assertIsNone(cfg.get_filename('qwerty', 'def'))
-        self.assertIsNone(cfg.get_line('qwerty', 'def'))
-
+            self.assertEqual(cfg.get('qwerty', 'def'), 'b')
+            self.assertIsNone(cfg.get_location('qwerty', 'def'))
+            self.assertIsNone(cfg.get_filename('qwerty', 'def'))
+            self.assertIsNone(cfg.get_line('qwerty', 'def'))
