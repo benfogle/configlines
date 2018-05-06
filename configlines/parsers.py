@@ -115,7 +115,7 @@ class LineTrackingMixin(object):
             self._curr_lineno = None
 
     def set(self, section, option, *args, **kwargs):
-        self._auto_set_location(section, option)
+        self._auto_set_location(section, self.optionxform(option))
         return super(LineTrackingMixin, self).set(section, option, *args, **kwargs)
 
     def get_location(self, section, option):
@@ -123,6 +123,7 @@ class LineTrackingMixin(object):
             raise configparser.NoSectionError(section)
         elif not self.has_option(section, option):
             raise configparser.NoOptionError(option, section)
+        option = self.optionxform(option)
         loc = self._option_lines[section].get(option)
         if loc is None and option in self._defaults:
             return self._option_lines[configparser.DEFAULTSECT].get(option)
@@ -150,14 +151,15 @@ class LineTrackingMixin(object):
                                  "or 'preserve'")
                 six.raise_from(err, None)
 
-        cur_location = self._option_lines[section].get(option)
+        option_xform = self.optionxform(option)
+        cur_location = self._option_lines[section].get(option_xform)
         super(LineTrackingMixin, self).set(section, option, value,
                 *args, **kwargs)
         if new_location == 'preserve':
             if cur_location is not None:
-                self._option_lines[section][option] = cur_location
+                self._option_lines[section][option_xform] = cur_location
         elif new_location is not None:
-            self._option_lines[section][option] = new_location
+            self._option_lines[section][option_xform] = new_location
 
     def set_location(self, section, option, location):
         if not self.has_section(section):
@@ -171,6 +173,7 @@ class LineTrackingMixin(object):
             except ValueError:
                 err = ValueError("location must be (filename, lineno) or None")
                 six.raise_from(err, None)
+        option = self.optionxform(option)
         self._option_lines[section][option] = location
 
 class RawConfigParser(LineTrackingMixin, configparser.RawConfigParser):

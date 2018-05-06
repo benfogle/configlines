@@ -15,6 +15,7 @@ class ConfigTest(TestCase):
 
         self.assertEqual(cfg.get('foo', 'bar'), '1')
         self.assertEqual(cfg.get_location('foo', 'bar'), (path, 2))
+        self.assertEqual(cfg.get_location('foo', 'BAR'), (path, 2))
         self.assertEqual(cfg.get_filename('foo', 'bar'), path)
         self.assertEqual(cfg.get_line('foo', 'bar'), 2)
 
@@ -205,3 +206,30 @@ class ConfigTest(TestCase):
 
         cfg.set('foo', 'baz', '2', location='preserve')
         self.assertIsNone(cfg.get_location('foo', 'baz'))
+
+    def test_xform(self):
+        class MyParser(configlines.ConfigParser):
+            def optionxform(self, option):
+                return option.upper()
+
+        cfg = MyParser()
+        path = resource_filename(__name__, 'data1.cfg')
+        cfg.read(path)
+
+        self.assertEqual(cfg.get('foo', 'bar'), '1')
+        self.assertEqual(cfg.get_location('foo', 'bar'), (path, 2))
+        self.assertEqual(cfg.get_filename('foo', 'bar'), path)
+        self.assertEqual(cfg.get_line('foo', 'bar'), 2)
+
+        cfg.set('foo', 'bar', 'A', location='preserve')
+        self.assertEqual(cfg.get('foo', 'bar'), 'A')
+        self.assertEqual(cfg.get_location('foo', 'bar'), (path, 2))
+
+        cfg.set_location('foo', 'bar', ('a', 1))
+        self.assertEqual(cfg.get_location('foo', 'bar'), ('a', 1))
+
+        loc = ("not_real.cfg", 1234)
+        cfg.set('foo', 'bar', 'B', location=loc)
+        self.assertEqual(cfg.get_location('foo', 'bar'), loc)
+
+
