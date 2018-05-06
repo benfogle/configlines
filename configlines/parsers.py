@@ -10,12 +10,6 @@ class LineTrackingMixin(object):
         # We'll call constructors explicitly to ensure that this happens after
         # the main base class.
 
-        if not issubclass(self._dict, OrderedDict):
-            # It can probably be done with some clever wrapping of classes, but
-            # it's a pain
-            raise TypeError("The only allowed dict_type is OrderedDict "
-                            "(for now)")
-
         self._option_lines = defaultdict(dict)
 
         # State:
@@ -35,8 +29,13 @@ class LineTrackingMixin(object):
                 dict_base.__init__(inner, *args, **kwargs)
 
             def __setitem__(inner, key, value):
-                if inner.sectname is not None:
-                    self._auto_set_location(inner.sectname, key)
+                sectname = inner.sectname
+                if sectname is not None:
+                    if self._curr_lineno is not None:
+                        location = self._curr_filename, self._curr_lineno
+                        self._option_lines[sectname][key] = location
+                    elif self._curr_filename is None and sectname is not None:
+                        self._option_lines[sectname].pop(key, None)
                 dict_base.__setitem__(inner, key, value)
 
             def __delitem__(inner, key):
@@ -95,16 +94,6 @@ class LineTrackingMixin(object):
         self._defaults = OptionWrapper(self._defaults)
         self._defaults.sectname = configparser.DEFAULTSECT
 
-    def _auto_set_location(self, sectname, option):
-        if self._curr_lineno is not None:
-            if sectname is None:
-                sectname = next(reversed(self._sections))
-            location = self._curr_filename, self._curr_lineno
-            self._option_lines[sectname][option] = location
-        elif self._curr_filename is None and sectname is not None:
-            self._option_lines[sectname].pop(option, None)
-
-
     def _read(self, fp, fpname):
         self._curr_filename = fpname
         fp = self._fp_wrapper(fp)
@@ -113,10 +102,6 @@ class LineTrackingMixin(object):
         finally:
             self._curr_filename = None
             self._curr_lineno = None
-
-    def set(self, section, option, *args, **kwargs):
-        self._auto_set_location(section, self.optionxform(option))
-        return super(LineTrackingMixin, self).set(section, option, *args, **kwargs)
 
     def get_location(self, section, option):
         if not self.has_section(section):
