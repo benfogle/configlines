@@ -83,7 +83,7 @@ line number information will not be present:
     >>> cfg.get_location('some_section', 'qwerty')
     None
 
-Overwriting options programatically will erase line number information:
+Overwriting options programmatically will erase line number information:
 
 .. code:: python
 
@@ -92,6 +92,20 @@ Overwriting options programatically will erase line number information:
     >>> cfg.set('some_section', 'foo', '1234')
     >>> cfg.get_location('some_section', 'foo')
     None
+
+Line number information can be set explicitly:
+
+.. code:: python
+
+    >>> cfg.set('some_section', 'foo', '1234', location=('somefile.cfg',10))
+    >>> cfg.get_location('some_section', 'foo')
+    ('somefile.cfg', 10)
+    >>> cfg.set('some_section', 'foo', '1234', location='preserve')
+    >>> cfg.get_location('some_section', 'foo')
+    ('somefile.cfg', 10)
+    >>> cfg.set_location('some_section', 'foo', ('otherfile.cfg', 50))
+    >>> cfg.get_location('some_section', 'foo')
+    ('otherfile.cfg', 50)
 
 .. _configparser: https://docs.python.org/3/library/configparser.html
 
