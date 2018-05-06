@@ -8,6 +8,5 @@ python:
     - "3.5"
     - "3.6"
 install: pip install tox-travis coverage codecov
-before_script: coverage erase
 script: tox
 after_script: codecov
