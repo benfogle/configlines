@@ -13,3 +13,12 @@ python:
 install: pip install tox-travis coverage codecov
 script: tox
 after_script: codecov
+
+deploy:
+    provider: pypi
+    user: "benfogle"
+    password:
+        secure: UcventtGa5bgFc+bXifUhtr8ieE/ULyQDXH/u0jhl9jvj4QCsteC/wM7X6j6y5Qd5J4WNnoPBYtj+B4/HXS8Qb+/Npd3edbWoTYbiliEe8y7jo//DBrVFCy6xwK5nH1FUe4RH3EVwIgmwCSunP60Ar0FbflB4a8g0vVs/Vh5H6qCXCVeqat7d3jFaSrCAYtudEzxeClGR0pVa2iEXfd8/cNhOWq2tO6PiOLLJCddRXIr5xQYkMHidOYS/GFjfCKPSFlWdqtMckfJYz6tL+veb9UdiuojAsi/MOBqVxpVWBe1+YaU21M/ZOewxmFCITTDDD/A/cYvrMebvejZLR9nYBfzNattiXLl+YbYknkaKXM7Zc4IgRPBW8hz/wLxkJmtTGk9EYl9Kvj+xcmD/b8wF0S6LjawsPmYON7SF8ec1LLmtADyTSz6vGOGAgGfiSOW3GegR7mTR/Vp7o2q54Fojo4Hee23LXm0GCGv/XiPWfpmsVrt2tdF5m9Uv54gISCSpHH/Ul2tQFm0ecXXG0e2x3C2lavtyZVJYrLkjhSqUWvpfBkzX/a3vGvL+sUVn3FSqn+i4Oc11Uw+yb+wpZ7hkxFcxfBMo7p4tgX0Hybn24Nw5rJFGgEeyaWs9u24CLPk/rF3UQ5bSDdR/0kK5vB54Tcn2ciYFImwqLCXCwyZer0=
+    on:
+        tags: true
+    distributions: "sdist bdist_wheel"
