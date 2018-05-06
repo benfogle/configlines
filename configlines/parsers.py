@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 import six
 from six.moves import configparser
@@ -16,7 +16,7 @@ class LineTrackingMixin(object):
             raise TypeError("The only allowed dict_type is OrderedDict "
                             "(for now)")
 
-        self._option_lines = {}
+        self._option_lines = defaultdict(dict)
 
         # State:
         # lineno = None, reading_file = None    => not reading
@@ -36,13 +36,34 @@ class LineTrackingMixin(object):
 
             def __setitem__(inner, key, value):
                 if inner.sectname is not None:
-                    self._set_location(inner.sectname, key)
+                    self._auto_set_location(inner.sectname, key)
                 dict_base.__setitem__(inner, key, value)
+
+            def __delitem__(inner, key):
+                dict_base.__delitem__(inner, key)
+                if inner.sectname is not None:
+                    self._option_lines[inner.sectname].pop(key, None)
+
+            def pop(inner, key, *args, **kwargs):
+                val = dict_base.pop(inner, key, *args, **kwargs)
+                if inner.sectname is not None:
+                    self._option_lines[inner.sectname].pop(key, None)
+                return val
+
 
         class SectionWrapper(self._dict):
             def __setitem__(inner, key, value):
                 value.sectname = key
                 dict_base.__setitem__(inner, key, value)
+
+            def __delitem__(inner, key):
+                dict_base.__delitem__(inner, key)
+                del self._option_lines[key]
+
+            def pop(inner, key, *args, **kwargs):
+                val = dict_base.pop(inner, key, *args, **kwargs)
+                self._option_lines.pop(key, None)
+                return val
 
         class FpWrapper(object):
             def __init__(inner, fp):
@@ -74,14 +95,14 @@ class LineTrackingMixin(object):
         self._defaults = OptionWrapper(self._defaults)
         self._defaults.sectname = configparser.DEFAULTSECT
 
-    def _set_location(self, sectname, option):
+    def _auto_set_location(self, sectname, option):
         if self._curr_lineno is not None:
             if sectname is None:
                 sectname = next(reversed(self._sections))
             location = self._curr_filename, self._curr_lineno
-            self._option_lines[sectname, option] = location
+            self._option_lines[sectname][option] = location
         elif self._curr_filename is None and sectname is not None:
-            self._option_lines.pop((sectname, option), None)
+            self._option_lines[sectname].pop(option, None)
 
 
     def _read(self, fp, fpname):
@@ -94,7 +115,7 @@ class LineTrackingMixin(object):
             self._curr_lineno = None
 
     def set(self, section, option, *args, **kwargs):
-        self._set_location(section, option)
+        self._auto_set_location(section, option)
         return super(LineTrackingMixin, self).set(section, option, *args, **kwargs)
 
     def get_location(self, section, option):
@@ -102,9 +123,9 @@ class LineTrackingMixin(object):
             raise configparser.NoSectionError(section)
         elif not self.has_option(section, option):
             raise configparser.NoOptionError(option, section)
-        loc = self._option_lines.get((section, option))
+        loc = self._option_lines[section].get(option)
         if loc is None and option in self._defaults:
-            return self._option_lines.get((configparser.DEFAULTSECT, option))
+            return self._option_lines[configparser.DEFAULTSECT].get(option)
         return loc
 
     def get_line(self, section, option):
@@ -129,14 +150,14 @@ class LineTrackingMixin(object):
                                  "or 'preserve'")
                 six.raise_from(err, None)
 
-        cur_location = self._option_lines.get((section, option))
+        cur_location = self._option_lines[section].get(option)
         super(LineTrackingMixin, self).set(section, option, value,
                 *args, **kwargs)
         if new_location == 'preserve':
             if cur_location is not None:
-                self._option_lines[section, option] = cur_location
+                self._option_lines[section][option] = cur_location
         elif new_location is not None:
-            self._option_lines[section, option] = new_location
+            self._option_lines[section][option] = new_location
 
     def set_location(self, section, option, location):
         if not self.has_section(section):
@@ -150,7 +171,7 @@ class LineTrackingMixin(object):
             except ValueError:
                 err = ValueError("location must be (filename, lineno) or None")
                 six.raise_from(err, None)
-        self._option_lines[section, option] = location
+        self._option_lines[section][option] = location
 
 class RawConfigParser(LineTrackingMixin, configparser.RawConfigParser):
     def __init__(self, *args, **kwargs):

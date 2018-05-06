@@ -165,3 +165,43 @@ class ConfigTest(TestCase):
             cfg.get_location('not_here', 'bar')
         with self.assertRaises(configparser.NoOptionError):
             cfg.get_location('foo', 'bar')
+
+    def test_remove_option(self):
+        cfg = configlines.ConfigParser()
+        path = resource_filename(__name__, 'data1.cfg')
+        cfg.read(path)
+
+        self.assertEqual(cfg.get_location('foo', 'bar'), (path, 2))
+        cfg.remove_option('foo', 'bar')
+
+        with self.assertRaises(configparser.NoOptionError):
+            cfg.get_location('foo', 'bar')
+
+        cfg.set('foo', 'bar', '1')
+        self.assertIsNone(cfg.get_location('foo', 'bar'))
+
+        self.assertEqual(cfg.get_location('foo', 'baz'), (path, 3))
+        cfg.remove_option('foo', 'baz')
+        cfg.set('foo', 'baz', '2', location='preserve')
+        self.assertIsNone(cfg.get_location('foo', 'baz'))
+
+    def test_remove_section(self):
+        cfg = configlines.ConfigParser()
+        path = resource_filename(__name__, 'data1.cfg')
+        cfg.read(path)
+
+        self.assertEqual(cfg.get_location('foo', 'bar'), (path, 2))
+
+        cfg.remove_section('foo')
+        with self.assertRaises(configparser.NoSectionError):
+            cfg.get_location('foo', 'bar')
+
+        cfg.add_section('foo')
+        with self.assertRaises(configparser.NoOptionError):
+            cfg.get_location('foo', 'bar')
+
+        cfg.set('foo', 'bar', '1')
+        self.assertIsNone(cfg.get_location('foo', 'bar'))
+
+        cfg.set('foo', 'baz', '2', location='preserve')
+        self.assertIsNone(cfg.get_location('foo', 'baz'))
