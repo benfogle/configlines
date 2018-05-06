@@ -156,3 +156,12 @@ class ConfigTest(TestCase):
             cfg.set_location('not_here', 'bar', ('a', 1))
         with self.assertRaises(configparser.NoOptionError):
             cfg.set_location('foo', 'baz', ('a', 1))
+
+    def test_get_nonexistant(self):
+        cfg = configlines.ConfigParser()
+        cfg.add_section('foo')
+        
+        with self.assertRaises(configparser.NoSectionError):
+            cfg.get_location('not_here', 'bar')
+        with self.assertRaises(configparser.NoOptionError):
+            cfg.get_location('foo', 'bar')

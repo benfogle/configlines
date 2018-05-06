@@ -98,7 +98,9 @@ class LineTrackingMixin(object):
         return super(LineTrackingMixin, self).set(section, option, *args, **kwargs)
 
     def get_location(self, section, option):
-        if not self.has_option(section, option):
+        if not self.has_section(section):
+            raise configparser.NoSectionError(section)
+        elif not self.has_option(section, option):
             raise configparser.NoOptionError(option, section)
         loc = self._option_lines.get((section, option))
         if loc is None and option in self._defaults:
