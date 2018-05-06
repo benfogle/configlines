@@ -107,3 +107,52 @@ class ConfigTest(TestCase):
         self.assertEqual(cfg.get_location('sectA', 'baz'), (path2, 2))
         self.assertEqual(cfg.get_filename('sectA', 'baz'), path2)
         self.assertEqual(cfg.get_line('sectA', 'baz'), 2)
+
+    def test_explicit_location(self):
+        cfg = configlines.ConfigParser()
+        path = resource_filename(__name__, 'data1.cfg')
+        cfg.read(path)
+
+        self.assertEqual(cfg.get('foo', 'bar'), '1')
+        self.assertEqual(cfg.get_location('foo', 'bar'), (path, 2))
+
+        cfg.set('foo', 'bar', 'A', location='preserve')
+        self.assertEqual(cfg.get('foo', 'bar'), 'A')
+        self.assertEqual(cfg.get_location('foo', 'bar'), (path, 2))
+
+        loc = ("not_real.cfg", 1234)
+        cfg.set('foo', 'bar', 'B', location=loc)
+        self.assertEqual(cfg.get('foo', 'bar'), 'B')
+        self.assertEqual(cfg.get_location('foo', 'bar'), loc)
+
+        with self.assertRaises(ValueError):
+            cfg.set('foo', 'bar', 'C', location="a bad value")
+        self.assertEqual(cfg.get('foo', 'bar'), 'B')
+        self.assertEqual(cfg.get_location('foo', 'bar'), loc)
+
+        with self.assertRaises(configparser.NoSectionError):
+            cfg.set('not_here', 'bar', 'C')
+
+        cfg.set('foo', 'bar', 'D', location=None)
+        self.assertIsNone(cfg.get_location('foo', 'bar'))
+
+    def test_set_location(self):
+        cfg = configlines.ConfigParser()
+        cfg.add_section('foo')
+        cfg.set('foo', 'bar', 'A')
+        self.assertIsNone(cfg.get_location('foo', 'bar'))
+
+        cfg.set_location('foo', 'bar', ('a', 1))
+        self.assertEqual(cfg.get_location('foo', 'bar'), ('a', 1))
+
+        with self.assertRaises(ValueError):
+            cfg.set_location('foo', 'bar', 'a bad value')
+        self.assertEqual(cfg.get_location('foo', 'bar'), ('a', 1))
+
+        cfg.set_location('foo', 'bar', None)
+        self.assertIsNone(cfg.get_location('foo', 'bar'))
+
+        with self.assertRaises(configparser.NoSectionError):
+            cfg.set_location('not_here', 'bar', ('a', 1))
+        with self.assertRaises(configparser.NoOptionError):
+            cfg.set_location('foo', 'baz', ('a', 1))

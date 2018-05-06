@@ -117,6 +117,38 @@ class LineTrackingMixin(object):
             return loc[0]
         return None
 
+    def set(self, section, option, value, *args, **kwargs):
+        new_location = kwargs.pop('location', None)
+        if new_location not in ('preserve', None):
+            try:
+                filename, lineno = new_location
+            except ValueError:
+                err = ValueError("location must be (filename, lineno), None, "
+                                 "or 'preserve'")
+                six.raise_from(err, None)
+
+        cur_location = self._option_lines.get((section, option))
+        super(LineTrackingMixin, self).set(section, option, value,
+                *args, **kwargs)
+        if new_location == 'preserve':
+            if cur_location is not None:
+                self._option_lines[section, option] = cur_location
+        elif new_location is not None:
+            self._option_lines[section, option] = new_location
+
+    def set_location(self, section, option, location):
+        if not self.has_section(section):
+            raise configparser.NoSectionError(section)
+        elif not self.has_option(section, option):
+            raise configparser.NoOptionError(option, section)
+
+        if location is not None:
+            try:
+                filename, lineno = location
+            except ValueError:
+                err = ValueError("location must be (filename, lineno) or None")
+                six.raise_from(err, None)
+        self._option_lines[section, option] = location
 
 class RawConfigParser(LineTrackingMixin, configparser.RawConfigParser):
     def __init__(self, *args, **kwargs):
