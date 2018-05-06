@@ -1,3 +1,10 @@
+.. image:: https://travis-ci.org/benfogle/configlines.svg?branch=master
+    :target: https://travis-ci.org/benfogle/configlines
+
+.. image:: https://codecov.io/gh/benfogle/configlines/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/benfogle/configlines
+
+
 Description
 -----------
 This module is an extension to Python's standard `configparser`_ module
