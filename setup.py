@@ -6,7 +6,7 @@ def readme():
 
 setup(
     name='configlines',
-    version='0.2',
+    version='0.3',
     description="Add line number information to ConfigParser options",
     long_description=readme(),
     classifiers=[
