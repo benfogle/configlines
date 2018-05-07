@@ -5,7 +5,12 @@ from six.moves import configparser
 
 
 
-class LineTrackingMixin(object):
+class _LineTrackingMixin(object):
+    # This is an internal class that patches in line tracking functionality
+    # to objects derived from RawConfigParser.
+    # Note: No docstring so that we don't accidentally mess up derived
+    # classes' docstrings.
+
     def __init__(self):
         # We'll call constructors explicitly to ensure that this happens after
         # the main base class.
@@ -24,6 +29,9 @@ class LineTrackingMixin(object):
 
         dict_base = self._dict
         class OptionWrapper(self._dict):
+            # Tracks when options are added or removed, and adds or removes
+            # line information as appropriate.
+
             def __init__(inner, *args, **kwargs):
                 inner.sectname = None
                 dict_base.__init__(inner, *args, **kwargs)
@@ -49,8 +57,10 @@ class LineTrackingMixin(object):
                     self._option_lines[inner.sectname].pop(key, None)
                 return val
 
-
         class SectionWrapper(self._dict):
+            # OptionWrappers need to know their names. This wrapper class
+            # ensures that they get that information when they are added.
+            # Also removes line information when sections are removed
             def __setitem__(inner, key, value):
                 value.sectname = key
                 dict_base.__setitem__(inner, key, value)
@@ -65,6 +75,7 @@ class LineTrackingMixin(object):
                 return val
 
         class FpWrapper(object):
+            # A simple wrapper to track line numbers as files are read.
             def __init__(inner, fp):
                 inner.fp = fp
                 self._curr_lineno = None
@@ -98,12 +109,18 @@ class LineTrackingMixin(object):
         self._curr_filename = fpname
         fp = self._fp_wrapper(fp)
         try:
-            super(LineTrackingMixin, self)._read(fp, fpname)
+            super(_LineTrackingMixin, self)._read(fp, fpname)
         finally:
             self._curr_filename = None
             self._curr_lineno = None
 
     def get_location(self, section, option):
+        """Get location information for an option value in a given section.
+
+        Returns a tuple (filename, line_number) if location information
+        exists, and None otherwise.
+        """
+
         if not self.has_section(section):
             raise configparser.NoSectionError(section)
         elif not self.has_option(section, option):
@@ -115,18 +132,45 @@ class LineTrackingMixin(object):
         return loc
 
     def get_line(self, section, option):
+        """Get the line number for an option value in a given section.
+
+        Returns the line number if location information exists, and None
+        otherwise.
+        """
+
         loc = self.get_location(section, option)
         if loc is not None:
             return loc[1]
         return None
 
     def get_filename(self, section, option):
+        """Get the file name for an option value in a given section.
+
+        Returns the file name if location information exists, and None
+        otherwise.
+        """
         loc = self.get_location(section, option)
         if loc is not None:
             return loc[0]
         return None
 
     def set(self, section, option, value, *args, **kwargs):
+        """Works like set() as documented in the configparser module, with
+        the following optional keyword-only argument:
+
+        If `location' is provided, it must be None, a tuple consiting of
+        (filename, line_number), or the string 'preserve'.
+
+        If `location' is None, (the default,) then location information will
+        be erased, if present.
+
+        If `location' is a tuple, it will be set as the new location
+        information.
+
+        If `location' is the string 'preserve', then line information will
+        remain unchanged, if present.
+        """
+
         new_location = kwargs.pop('location', None)
         if new_location not in ('preserve', None):
             try:
@@ -138,7 +182,7 @@ class LineTrackingMixin(object):
 
         option_xform = self.optionxform(option)
         cur_location = self._option_lines[section].get(option_xform)
-        super(LineTrackingMixin, self).set(section, option, value,
+        super(_LineTrackingMixin, self).set(section, option, value,
                 *args, **kwargs)
         if new_location == 'preserve':
             if cur_location is not None:
@@ -147,6 +191,10 @@ class LineTrackingMixin(object):
             self._option_lines[section][option_xform] = new_location
 
     def set_location(self, section, option, location):
+        """Explicitly set location information for an option value in a given
+        section. `location' must be a tuple of (filename, line_number).
+        """
+
         if not self.has_section(section):
             raise configparser.NoSectionError(section)
         elif not self.has_option(section, option):
@@ -161,18 +209,18 @@ class LineTrackingMixin(object):
         option = self.optionxform(option)
         self._option_lines[section][option] = location
 
-class RawConfigParser(LineTrackingMixin, configparser.RawConfigParser):
+class RawConfigParser(_LineTrackingMixin, configparser.RawConfigParser):
     def __init__(self, *args, **kwargs):
         configparser.RawConfigParser.__init__(self, *args, **kwargs)
-        LineTrackingMixin.__init__(self)
+        _LineTrackingMixin.__init__(self)
 
-class ConfigParser(LineTrackingMixin, configparser.ConfigParser):
+class ConfigParser(_LineTrackingMixin, configparser.ConfigParser):
     def __init__(self, *args, **kwargs):
         configparser.ConfigParser.__init__(self, *args, **kwargs)
-        LineTrackingMixin.__init__(self)
+        _LineTrackingMixin.__init__(self)
 
-class SafeConfigParser(LineTrackingMixin, configparser.SafeConfigParser):
+class SafeConfigParser(_LineTrackingMixin, configparser.SafeConfigParser):
     def __init__(self, *args, **kwargs):
         configparser.SafeConfigParser.__init__(self, *args, **kwargs)
-        LineTrackingMixin.__init__(self)
+        _LineTrackingMixin.__init__(self)
 
